@@ -3,8 +3,6 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'suresh4927/node-app'
-        DOCKER_USER = 'suresh4927'
-        DOCKER_PASS = 'Suresh@1999'
     }
 
     stages {
@@ -18,10 +16,12 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 echo "📤 Logging in and pushing image to Docker Hub..."
-                sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push $IMAGE_NAME:latest
-                '''
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push $IMAGE_NAME:latest
+                    '''
+                }
             }
         }
 
@@ -42,4 +42,3 @@ pipeline {
         }
     }
 }
-
