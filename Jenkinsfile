@@ -26,11 +26,26 @@ pipeline {
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                echo "🚀 Deploying to Kubernetes..."
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
+    steps {
+        echo "🚀 Deploying to Kubernetes..."
+
+        // Ensure kubectl is available and kubeconfig is set
+        sh '''
+        echo "🔍 Verifying kubectl version and context..."
+        which kubectl
+        kubectl version --client
+        kubectl config current-context
+
+        echo "📦 Applying Kubernetes manifests..."
+        set -e  # fail the script if any command fails
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/service.yaml
+
+        echo "✅ Deployment applied successfully."
+        '''
+    }
+}
+
                 '''
             }
         }
