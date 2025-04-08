@@ -3,43 +3,48 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'suresh4927/node-app'
-        DOCKER_HUB_CREDS = credentials('NCL') // use the ID you saved
     }
 
     stages {
-        stage('Clone Code') {
-            steps {
-                git 'https://github.com/kanakalasuresh1999/node-app.git' // replace with your repo URL
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $suresh4927/node-app:latest .'
+                echo "🐳 Building Docker image..."
+                sh 'docker build -t $IMAGE_NAME:latest .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                withDockerRegistry([ credentialsId: "$DOCKER_HUB_CREDS", url: "" ]) {
-                    sh 'docker push $suresh4927/node-app:latest'
+                echo "📤 Logging in and pushing image to Docker Hub..."
+                withCredentials([usernamePassword(credentialsId: 'NCL', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push $IMAGE_NAME:latest
+                    '''
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh 'kubectl apply -f k8s/'  // Make sure your manifests are in a "k8s/" folder
-            }
-        }
-    }
+                echo "🚀 Deploying to Kubernetes..."
+                sh '''
+                echo "🔍 Verifying kubectl version and context..."
+                which kubectl
+                kubectl version --client
+                kubectl config current-context
 
-    post {
-        success {
-            echo '🚀 Deployment successful!'
-        }
-        failure {
-            echo '❌ Deployment failed!'
+                echo "📦 Applying Kubernetes manifests..."
+                set -e  # fail the script if any command fails
+                kubectl apply -f k8s/deployment.yaml
+                kubectl apply -f k8s/service.yaml
+
+                echo "⏳ Waiting for rollout to complete..."
+                kubectl rollout status deployment/node-app
+
+                echo "✅ Deployment applied and running."
+                '''
+            }
         }
     }
 }
