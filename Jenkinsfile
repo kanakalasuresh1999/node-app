@@ -3,51 +3,43 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'suresh4927/node-app'
+        DOCKER_HUB_CREDS = credentials('NCL') // use the ID you saved
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Code') {
             steps {
-                echo '🔄 Checking out source code...'
-                checkout scm
+                git 'https://github.com/kanakalasuresh1999/node-app.git' // replace with your repo URL
             }
         }
-        ...  can you please add.. my jenkins 
-pipeline {
-    agent any
 
-    environment {
-        IMAGE_NAME = 'suresh4927/node-app'
-    }
-
-    stages {
         stage('Build Docker Image') {
             steps {
-                echo "🐳 Building Docker image..."
-                sh 'docker build -t $IMAGE_NAME:latest .'
+                sh 'docker build -t $suresh4927/node-app:latest .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo "📤 Logging in and pushing image to Docker Hub..."
-                withCredentials([usernamePassword(credentialsId: 'NCL', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker push $IMAGE_NAME:latest
-                    '''
+                withDockerRegistry([ credentialsId: "$DOCKER_HUB_CREDS", url: "" ]) {
+                    sh 'docker push $suresh4927/node-app:latest'
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                echo "🚀 Deploying to Kubernetes..."
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service.yaml
-                '''
+                sh 'kubectl apply -f k8s/'  // Make sure your manifests are in a "k8s/" folder
             }
+        }
+    }
+
+    post {
+        success {
+            echo '🚀 Deployment successful!'
+        }
+        failure {
+            echo '❌ Deployment failed!'
         }
     }
 }
